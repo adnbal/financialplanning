@@ -150,7 +150,7 @@ user_message = st.text_input("Type your message to the Botpress agent:")
 st.subheader("💬 Ask Your Financial Assistant (Botpress)")
 
 # User input
-user_message = st.text_input("Type your message to the Botpress agent:")
+user_message = st.text_input("Type your message to the Botpress agent:", key="botpress_user_input")
 
 # Start new conversation (once)
 if "botpress_convo_id" not in st.session_state:
