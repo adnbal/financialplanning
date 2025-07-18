@@ -187,6 +187,7 @@ if st.button("Send to Botpress"):
             reply_res.raise_for_status()
 
             messages = reply_res.json()
+            st.json(messages)  # Show full raw Botpress response
             if isinstance(messages, list):
                 for msg in reversed(messages):
                     if isinstance(msg, dict) and msg.get("authorRole") == "bot":
