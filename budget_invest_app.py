@@ -5,7 +5,7 @@ import requests
 import google.generativeai as genai
 
 # 🔐 Secrets
-BOT_ID = st.secrets["botpress"]["chat_api_id"]
+CHAT_API_ID = st.secrets["botpress"]["chat_api_id"]
 BOTPRESS_TOKEN = st.secrets["botpress"]["token"]
 genai.configure(api_key=st.secrets["gemini"]["api_key"])
 OPENROUTER_API_KEY = st.secrets["openrouter"]["api_key"]
@@ -26,36 +26,31 @@ def get_alpha_vantage_monthly_return(symbol):
     closes = [float(v["5. adjusted close"]) for v in ts.values()]
     if len(closes) < 2:
         return None
-    return (closes[0] - closes[1]) / closes[1]
+    monthly_return = (closes[0] - closes[1]) / closes[1]
+    return monthly_return
 
 # 🧾 Inputs
 st.sidebar.header("📊 Monthly Income")
-income = st.sidebar.number_input("Monthly income (before tax, $)", min_value=0.0, value=5000.0)
+income = st.sidebar.number_input("Monthly income (before tax, $)", min_value=0.0, value=5000.0, step=100.0)
 tax_rate = st.sidebar.slider("Tax rate (%)", 0, 50, 20)
 
 st.sidebar.header("📌 Expenses")
-housing = st.sidebar.number_input("Housing / Rent ($)", 0.0, 5000.0, 1200.0)
-food = st.sidebar.number_input("Food / Groceries ($)", 0.0, 5000.0, 500.0)
-transport = st.sidebar.number_input("Transport ($)", 0.0, 5000.0, 300.0)
-utilities = st.sidebar.number_input("Utilities ($)", 0.0, 5000.0, 200.0)
-entertainment = st.sidebar.number_input("Entertainment ($)", 0.0, 5000.0, 200.0)
-others = st.sidebar.number_input("Other expenses ($)", 0.0, 5000.0, 200.0)
+housing = st.sidebar.number_input("Housing / Rent ($)", 0.0, 5000.0, 1200.0, 50.0)
+food = st.sidebar.number_input("Food / Groceries ($)", 0.0, 5000.0, 500.0, 50.0)
+transport = st.sidebar.number_input("Transport ($)", 0.0, 5000.0, 300.0, 50.0)
+utilities = st.sidebar.number_input("Utilities ($)", 0.0, 5000.0, 200.0, 50.0)
+entertainment = st.sidebar.number_input("Entertainment ($)", 0.0, 5000.0, 200.0, 50.0)
+others = st.sidebar.number_input("Other expenses ($)", 0.0, 5000.0, 200.0, 50.0)
 
 st.sidebar.header("📈 Investments")
-stocks = st.sidebar.number_input("Stocks ($)", 0.0, 5000.0, 500.0)
-bonds = st.sidebar.number_input("Bonds ($)", 0.0, 5000.0, 300.0)
-real_estate = st.sidebar.number_input("Real Estate ($)", 0.0, 5000.0, 0.0)
-crypto = st.sidebar.number_input("Crypto ($)", 0.0, 5000.0, 0.0)
-fixed_deposit = st.sidebar.number_input("Fixed Deposit ($)", 0.0, 5000.0, 0.0)
+stocks = st.sidebar.number_input("Stocks investment ($)", 0.0, 5000.0, 500.0, 100.0)
+bonds = st.sidebar.number_input("Bonds investment ($)", 0.0, 5000.0, 300.0, 100.0)
+real_estate = st.sidebar.number_input("Real estate ($)", 0.0, 5000.0, 0.0, 100.0)
+crypto = st.sidebar.number_input("Crypto ($)", 0.0, 5000.0, 0.0, 100.0)
+fixed_deposit = st.sidebar.number_input("Fixed deposit ($)", 0.0, 5000.0, 0.0, 100.0)
 
-months = st.sidebar.slider("Projection months", 1, 60, 12)
-savings_target = st.sidebar.number_input("Target savings ($)", 0.0, 1000000.0, 10000.0)
-
-# 💰 Calculations
-after_tax_income = income * (1 - tax_rate / 100)
-total_exp = housing + food + transport + utilities + entertainment + others
-total_inv = stocks + bonds + real_estate + crypto + fixed_deposit
-net_flow = after_tax_income - total_exp - total_inv
+months = st.sidebar.slider("Projection period (months)", 1, 60, 12)
+savings_target = st.sidebar.number_input("Savings target at end of period ($)", 0.0, 1_000_000.0, 10000.0, 500.0)
 
 # 📈 Returns
 stock_r = get_alpha_vantage_monthly_return("SPY") or 0.01
@@ -63,6 +58,12 @@ bond_r = get_alpha_vantage_monthly_return("AGG") or 0.003
 real_r = 0.004
 crypto_r = 0.02
 fd_r = 0.003
+
+# 💰 Calculations
+after_tax_income = income * (1 - tax_rate / 100)
+total_exp = housing + food + transport + utilities + entertainment + others
+total_inv = stocks + bonds + real_estate + crypto + fixed_deposit
+net_flow = after_tax_income - total_exp - total_inv
 
 bal = 0
 rows = []
@@ -97,11 +98,35 @@ st.metric("Net Cash Flow", f"${net_flow:,.2f}/mo")
 # 📊 Charts
 st.subheader("📈 Net Worth Growth")
 fig = px.line(df, x="Month", y=["Balance", "Stocks", "Bonds", "RealEstate", "Crypto", "FixedDeposit", "NetWorth"],
-              title="Net Worth Over Time", markers=True)
+              markers=True, title="Net Worth & Investments Over Time")
 fig.add_hline(y=savings_target, line_dash="dash", line_color="red", annotation_text="Target")
 st.plotly_chart(fig, use_container_width=True)
 
-# 💬 Prompt
+st.subheader("🧾 Expense Breakdown")
+exp_s = pd.Series({
+    "Housing": housing,
+    "Food": food,
+    "Transport": transport,
+    "Utilities": utilities,
+    "Entertainment": entertainment,
+    "Others": others
+})
+st.plotly_chart(px.pie(names=exp_s.index, values=exp_s.values, title="Expense Breakdown"), use_container_width=True)
+
+st.subheader("💼 Investment Breakdown")
+inv_s = pd.Series({
+    "Stocks": stocks,
+    "Bonds": bonds,
+    "RealEstate": real_estate,
+    "Crypto": crypto,
+    "FixedDeposit": fixed_deposit
+})
+st.plotly_chart(px.pie(names=inv_s.index, values=inv_s.values, title="Investment Breakdown"), use_container_width=True)
+
+# 🤖 AI Suggestions
+st.subheader("🤖 AI Suggestions")
+col1, col2 = st.columns(2)
+
 prompt = f"""
 Financial summary:
 Gross income: ${income}
@@ -112,93 +137,77 @@ Investments: ${total_inv}
 Net cash flow: ${net_flow}/mo
 Savings target: ${savings_target}
 Projected net worth: ${df['NetWorth'].iloc[-1]}
-
-Provide advice on expense control, investment balance, and achieving the savings target.
+Provide advice on expense control, investment balance, and achieving target.
 """
 
-# 🧠 Gemini & DeepSeek buttons
-st.subheader("🤖 AI Suggestions")
-col1, col2 = st.columns(2)
-
-if col1.button("💡 Gemini Advice"):
-    with col1:
-        model = genai.GenerativeModel("gemini-pro")
-        response = model.generate_content(prompt)
-        st.write(response.text)
-
-if col2.button("💡 DeepSeek Advice"):
-    with col2:
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "deepseek/deepseek-r1:free",
-            "messages": [{"role": "user", "content": prompt}]
-        }
-        r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
-        output = r.json()["choices"][0]["message"]["content"]
-        st.write(output)
-
-# 🧠 Botpress Chat API
-st.subheader("💬 Ask Your Financial Assistant (Botpress)")
-
-user_message = st.text_input("Type your message to the Botpress agent:", key="botpress_user_input")
-
-# Start conversation only once
-if "botpress_convo_id" not in st.session_state:
-    try:
-        headers = {
-            "Authorization": f"Bearer {BOTPRESS_TOKEN}",
-            "x-bot-id": BOT_ID
-        }
-        res = requests.post("https://chat.botpress.cloud/v1/chat/conversations", headers=headers)
-        res.raise_for_status()
-        st.session_state.botpress_convo_id = res.json()["id"]
-    except Exception as e:
-        st.error(f"❌ Failed to start conversation: {e}")
-
-# Send message and show reply
-if st.button("Send to Botpress"):
-    if user_message.strip():
+if col1.button("Generate Gemini Suggestion"):
+    with st.spinner("Gemini generating..."):
         try:
-            # Send user message
+            model = genai.GenerativeModel("gemini-pro")
+            response = model.generate_content(prompt)
+            st.write(response.text)
+        except Exception as e:
+            st.error(f"Gemini error: {e}")
+
+if col2.button("Generate DeepSeek Suggestion"):
+    with st.spinner("DeepSeek generating..."):
+        try:
             headers = {
-                "Authorization": f"Bearer {BOTPRESS_TOKEN}",
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "conversationId": st.session_state.botpress_convo_id,
-                "type": "text",
-                "text": user_message
+                "model": "deepseek/deepseek-r1:free",
+                "messages": [{"role": "user", "content": prompt}]
             }
-            send_res = requests.post(
-                "https://chat.botpress.cloud/v1/chat/messages",
-                headers=headers,
-                json=payload
-            )
-            send_res.raise_for_status()
-            st.success("✅ Message sent to Botpress!")
-
-            # Fetch latest reply
-            fetch_url = f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.botpress_convo_id}/messages"
-            reply_headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
-            reply_res = requests.get(fetch_url, headers=reply_headers)
-            reply_res.raise_for_status()
-
-            messages = reply_res.json()
-            st.json(messages)  # Show full raw Botpress response
-            if isinstance(messages, list):
-                for msg in reversed(messages):
-                    if isinstance(msg, dict) and msg.get("authorRole") == "bot":
-                        st.markdown("#### 🤖 Botpress Reply:")
-                        st.write(msg.get("payload", {}).get("text", "No text found."))
-                        break
-                else:
-                    st.info("🤖 Bot has not replied yet.")
-            else:
-                st.warning("⚠️ Unexpected Botpress message format.")
+            res = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=payload)
+            res.raise_for_status()
+            out = res.json()["choices"][0]["message"]["content"]
+            st.write(out)
         except Exception as e:
-            st.error(f"❌ Botpress error: {e}")
-    else:
-        st.warning("⚠️ Please type a message before sending.")
+            st.error(f"OpenRouter error: {e}")
+
+# 💬 Botpress Text Chat
+st.subheader("💬 Ask Your Financial Assistant (Botpress)")
+user_message = st.text_input("Type your message to the Botpress agent:")
+
+if st.button("Send to Botpress"):
+    try:
+        # Create conversation
+        headers = {
+            "Authorization": f"Bearer {BOTPRESS_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        create_res = requests.post(
+            f"https://chat.botpress.cloud/api/v1/chat/conversations",
+            headers=headers,
+            json={"botId": CHAT_API_ID}
+        )
+        create_res.raise_for_status()
+        convo_id = create_res.json()["id"]
+
+        # Send user message
+        requests.post(
+            f"https://chat.botpress.cloud/api/v1/chat/conversations/{convo_id}/messages",
+            headers=headers,
+            json={"type": "text", "text": user_message}
+        )
+
+        # Get bot reply
+        reply_res = requests.get(
+            f"https://chat.botpress.cloud/api/v1/chat/conversations/{convo_id}/messages",
+            headers=headers
+        )
+        reply_res.raise_for_status()
+        data = reply_res.json()
+        messages = data.get("messages", [])
+
+        # Show response
+        for msg in reversed(messages):
+            if msg.get("authorRole") == "bot":
+                st.markdown("#### 🤖 Botpress Reply:")
+                st.write(msg.get("payload", {}).get("text", ""))
+                break
+
+    except Exception as e:
+        st.error(f"❌ Botpress error: {e}")
