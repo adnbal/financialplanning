@@ -168,46 +168,49 @@ if col2.button("Generate DeepSeek Suggestion"):
             st.error(f"OpenRouter error: {e}")
 
 # 💬 Botpress Text Chat
-st.subheader("💬 Ask Your Financial Assistant (Botpress)")
-user_message = st.text_input("Type your message to the Botpress agent:")
+st.subheader("🤖 Ask Your Financial Assistant (Botpress)")
 
+if "conversation_id" not in st.session_state:
+    init = requests.post(
+        "https://chat.botpress.cloud/v1/chat/conversations",
+        headers={"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
+    )
+    st.session_state.conversation_id = init.json().get("id")
+
+user_message = st.text_input("Type your message to the Botpress agent:", key="botpress_input")
 if st.button("Send to Botpress"):
-    try:
-        # Create conversation
-        headers = {
-            "Authorization": f"Bearer {BOTPRESS_TOKEN}",
-            "Content-Type": "application/json"
+    if user_message.strip():
+        payload = {
+            "type": "text",
+            "role": "user",
+            "payload": {
+                "text": user_message
+            }
         }
-        create_res = requests.post(
-            f"https://chat.botpress.cloud/api/v1/chat/conversations",
-            headers=headers,
-            json={"botId": CHAT_API_ID}
+        res = requests.post(
+            f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.conversation_id}/messages",
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {BOTPRESS_TOKEN}",
+                "X-Bot-Id": CHAT_API_ID,
+                "Content-Type": "application/json"
+            }
         )
-        create_res.raise_for_status()
-        convo_id = create_res.json()["id"]
+        if res.status_code == 200:
+            st.success("✅ Message sent to Botpress!")
 
-        # Send user message
-        requests.post(
-            f"https://chat.botpress.cloud/api/v1/chat/conversations/{convo_id}/messages",
-            headers=headers,
-            json={"type": "text", "text": user_message}
-        )
+            # Fetch the response
+            reply_res = requests.get(
+                f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.conversation_id}/messages",
+                headers={"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
+            )
+            data = reply_res.json()
+            messages = data.get("messages", [])
+            replies = [m["payload"]["text"] for m in messages if m["role"] == "assistant" and m["type"] == "text"]
 
-        # Get bot reply
-        reply_res = requests.get(
-            f"https://chat.botpress.cloud/api/v1/chat/conversations/{convo_id}/messages",
-            headers=headers
-        )
-        reply_res.raise_for_status()
-        data = reply_res.json()
-        messages = data.get("messages", [])
-
-        # Show response
-        for msg in reversed(messages):
-            if msg.get("authorRole") == "bot":
-                st.markdown("#### 🤖 Botpress Reply:")
-                st.write(msg.get("payload", {}).get("text", ""))
-                break
-
-    except Exception as e:
-        st.error(f"❌ Botpress error: {e}")
+            if replies:
+                st.info(f"🤖 Botpress: {replies[-1]}")
+            else:
+                st.warning("Botpress sent no reply.")
+        else:
+            st.error(f"❌ Botpress error: {res.text}")
