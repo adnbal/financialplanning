@@ -156,9 +156,25 @@ if "botpress_convo_id" not in st.session_state:
         st.error(f"Failed to start conversation: {e}")
 
 # Send message
+st.subheader("💬 Ask Your Financial Assistant (Botpress)")
+
+# Text input
+user_message = st.text_input("Type your message to the Botpress agent:")
+
+# Start new conversation only once
+if "botpress_convo_id" not in st.session_state:
+    try:
+        headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}", "x-bot-id": BOT_ID}
+        res = requests.post("https://chat.botpress.cloud/v1/chat/conversations", headers=headers)
+        st.session_state.botpress_convo_id = res.json()["id"]
+    except Exception as e:
+        st.error(f"❌ Failed to start conversation: {e}")
+
+# Send message + fetch reply
 if st.button("Send to Botpress"):
     if user_message.strip():
         try:
+            # Send user message
             headers = {
                 "Authorization": f"Bearer {BOTPRESS_TOKEN}",
                 "Content-Type": "application/json"
@@ -169,9 +185,31 @@ if st.button("Send to Botpress"):
                 "text": user_message
             }
             res = requests.post("https://chat.botpress.cloud/v1/chat/messages", headers=headers, json=payload)
+
             if res.status_code == 200:
                 st.success("✅ Message sent to Botpress!")
+
+                # Fetch response
+                headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
+                get_url = f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.botpress_convo_id}/messages"
+                reply_res = requests.get(get_url, headers=headers)
+                if reply_res.status_code == 200:
+                    messages = reply_res.json()
+                    # Get latest bot message (last message not from user)
+                    for msg in reversed(messages):
+                        if msg.get("authorRole") == "bot":
+                            st.markdown("#### 🤖 Botpress Reply:")
+                            st.write(msg["payload"]["text"])
+                            break
+                else:
+                    st.warning("⚠️ Could not fetch bot reply.")
             else:
+                st.error(f"❌ Botpress send error: {res.text}")
+        except Exception as e:
+            st.error(f"❌ Botpress error: {e}")
+    else:
+        st.warning("⚠️ Please enter a message before sending.")
+
                 st.error(f"Botpress error: {res.text}")
         except Exception as e:
             st.error(f"Botpress error: {e}")
