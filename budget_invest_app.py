@@ -147,10 +147,20 @@ st.subheader("💬 Ask Your Financial Assistant (Botpress)")
 user_message = st.text_input("Type your message to the Botpress agent:")
 
 # Start new conversation only once
+st.subheader("💬 Ask Your Financial Assistant (Botpress)")
+
+# User input
+user_message = st.text_input("Type your message to the Botpress agent:")
+
+# Start new conversation (once)
 if "botpress_convo_id" not in st.session_state:
     try:
-        headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}", "x-bot-id": BOT_ID}
+        headers = {
+            "Authorization": f"Bearer {BOTPRESS_TOKEN}",
+            "x-bot-id": BOT_ID
+        }
         res = requests.post("https://chat.botpress.cloud/v1/chat/conversations", headers=headers)
+        res.raise_for_status()
         st.session_state.botpress_convo_id = res.json()["id"]
     except Exception as e:
         st.error(f"❌ Failed to start conversation: {e}")
@@ -159,7 +169,7 @@ if "botpress_convo_id" not in st.session_state:
 if st.button("Send to Botpress"):
     if user_message.strip():
         try:
-            # Send message
+            # Send the user message
             headers = {
                 "Authorization": f"Bearer {BOTPRESS_TOKEN}",
                 "Content-Type": "application/json"
@@ -178,10 +188,12 @@ if st.button("Send to Botpress"):
             if res.status_code == 200:
                 st.success("✅ Message sent to Botpress!")
 
-                # Fetch reply
-                headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
+                # Fetch latest reply
                 get_url = f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.botpress_convo_id}/messages"
-                reply_res = requests.get(get_url, headers=headers)
+                reply_headers = {
+                    "Authorization": f"Bearer {BOTPRESS_TOKEN}"
+                }
+                reply_res = requests.get(get_url, headers=reply_headers)
 
                 if reply_res.status_code == 200:
                     messages = reply_res.json()
@@ -190,6 +202,8 @@ if st.button("Send to Botpress"):
                             st.markdown("#### 🤖 Botpress Reply:")
                             st.write(msg["payload"]["text"])
                             break
+                    else:
+                        st.info("🤖 No reply from bot yet.")
                 else:
                     st.warning("⚠️ Could not fetch bot reply.")
             else:
@@ -198,10 +212,4 @@ if st.button("Send to Botpress"):
             st.error(f"❌ Botpress error: {e}")
     else:
         st.warning("⚠️ Please enter a message before sending.")
-
-                st.error(f"Botpress error: {res.text}")
-        except Exception as e:
-            st.error(f"Botpress error: {e}")
-    else:
-        st.warning("❗Please enter a message.")
 
