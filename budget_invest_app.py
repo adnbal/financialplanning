@@ -143,24 +143,38 @@ if col2.button("💡 DeepSeek Advice"):
 # 🧠 Botpress Chat API
 st.subheader("💬 Ask Your Financial Assistant (Botpress)")
 
-if st.button("Send to Botpress Agent"):
+# Input box
+user_message = st.text_input("Type your message:")
+
+# Create and store conversation once per session
+if "botpress_convo_id" not in st.session_state:
     try:
-        # Start conversation
         headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}", "x-bot-id": BOT_ID}
         res = requests.post("https://chat.botpress.cloud/v1/chat/conversations", headers=headers)
-        convo_id = res.json()["id"]
-
-        # Send message
-        headers = {
-            "Authorization": f"Bearer {BOTPRESS_TOKEN}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "conversationId": convo_id,
-            "type": "text",
-            "text": prompt
-        }
-        res = requests.post("https://chat.botpress.cloud/v1/chat/messages", headers=headers, json=payload)
-        st.success("✅ Sent to Botpress Agent (check your Botpress inbox/logs)")
+        st.session_state.botpress_convo_id = res.json()["id"]
     except Exception as e:
-        st.error(f"Botpress error: {e}")
+        st.error(f"Failed to start conversation: {e}")
+
+# Send message
+if st.button("Send to Botpress"):
+    if user_message.strip():
+        try:
+            headers = {
+                "Authorization": f"Bearer {BOTPRESS_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "conversationId": st.session_state.botpress_convo_id,
+                "type": "text",
+                "text": user_message
+            }
+            res = requests.post("https://chat.botpress.cloud/v1/chat/messages", headers=headers, json=payload)
+            if res.status_code == 200:
+                st.success("✅ Message sent to Botpress!")
+            else:
+                st.error(f"Botpress error: {res.text}")
+        except Exception as e:
+            st.error(f"Botpress error: {e}")
+    else:
+        st.warning("❗Please enter a message.")
+
