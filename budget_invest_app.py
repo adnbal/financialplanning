@@ -143,21 +143,6 @@ if col2.button("💡 DeepSeek Advice"):
 # 🧠 Botpress Chat API
 st.subheader("💬 Ask Your Financial Assistant (Botpress)")
 
-# Input box
-user_message = st.text_input("Type your message:")
-
-# Create and store conversation once per session
-if "botpress_convo_id" not in st.session_state:
-    try:
-        headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}", "x-bot-id": BOT_ID}
-        res = requests.post("https://chat.botpress.cloud/v1/chat/conversations", headers=headers)
-        st.session_state.botpress_convo_id = res.json()["id"]
-    except Exception as e:
-        st.error(f"Failed to start conversation: {e}")
-
-# Send message
-st.subheader("💬 Ask Your Financial Assistant (Botpress)")
-
 # Text input
 user_message = st.text_input("Type your message to the Botpress agent:")
 
@@ -170,11 +155,11 @@ if "botpress_convo_id" not in st.session_state:
     except Exception as e:
         st.error(f"❌ Failed to start conversation: {e}")
 
-# Send message + fetch reply
+# Send message and fetch reply
 if st.button("Send to Botpress"):
     if user_message.strip():
         try:
-            # Send user message
+            # Send message
             headers = {
                 "Authorization": f"Bearer {BOTPRESS_TOKEN}",
                 "Content-Type": "application/json"
@@ -184,18 +169,22 @@ if st.button("Send to Botpress"):
                 "type": "text",
                 "text": user_message
             }
-            res = requests.post("https://chat.botpress.cloud/v1/chat/messages", headers=headers, json=payload)
+            res = requests.post(
+                "https://chat.botpress.cloud/v1/chat/messages",
+                headers=headers,
+                json=payload
+            )
 
             if res.status_code == 200:
                 st.success("✅ Message sent to Botpress!")
 
-                # Fetch response
+                # Fetch reply
                 headers = {"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
                 get_url = f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.botpress_convo_id}/messages"
                 reply_res = requests.get(get_url, headers=headers)
+
                 if reply_res.status_code == 200:
                     messages = reply_res.json()
-                    # Get latest bot message (last message not from user)
                     for msg in reversed(messages):
                         if msg.get("authorRole") == "bot":
                             st.markdown("#### 🤖 Botpress Reply:")
