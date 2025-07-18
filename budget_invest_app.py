@@ -189,7 +189,10 @@ with col2:
 
 # ✅ Embedded Botpress WebChat
 st.subheader("🤖 Ask Your Financial Assistant (Botpress)")
-iframe_url = "https://cdn.botpress.cloud/webchat/v3.0/shareable.html?configUrl=https://files.bpcontent.cloud/2025/07/02/02/20250702020605-VDMFG1YB.json"
+BOT_ID = st.secrets["botpress"]["chat_api_id"]
+CLIENT_ID = st.secrets["botpress"]["client_id"]
+
+iframe_url = f"https://chat.botpress.cloud/?botId={BOT_ID}&clientId={CLIENT_ID}"
 st.markdown(
     f'''
     <iframe
