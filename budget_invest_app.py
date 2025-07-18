@@ -168,6 +168,9 @@ if col2.button("Generate DeepSeek Suggestion"):
             st.error(f"OpenRouter error: {e}")
 
 # 💬 Botpress Text Chat
+
+user_message = st.text_input("Type your message to the Botpress agent:", key="botpress_input")
+
 if st.button("Send to Botpress"):
     if user_message.strip():
         payload = {
