@@ -5,7 +5,7 @@ import requests
 import google.generativeai as genai
 
 # 🔐 Secrets
-CHAT_API_ID = st.secrets["botpress"]["chat_api_id"]
+bot_id = st.secrets["botpress"]["chat_api_id"]
 BOTPRESS_TOKEN = st.secrets["botpress"]["token"]
 genai.configure(api_key=st.secrets["gemini"]["api_key"])
 OPENROUTER_API_KEY = st.secrets["openrouter"]["api_key"]
@@ -168,16 +168,6 @@ if col2.button("Generate DeepSeek Suggestion"):
             st.error(f"OpenRouter error: {e}")
 
 # 💬 Botpress Text Chat
-st.subheader("🤖 Ask Your Financial Assistant (Botpress)")
-
-if "conversation_id" not in st.session_state:
-    init = requests.post(
-        "https://chat.botpress.cloud/v1/chat/conversations",
-        headers={"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
-    )
-    st.session_state.conversation_id = init.json().get("id")
-
-user_message = st.text_input("Type your message to the Botpress agent:", key="botpress_input")
 if st.button("Send to Botpress"):
     if user_message.strip():
         payload = {
@@ -192,7 +182,7 @@ if st.button("Send to Botpress"):
             json=payload,
             headers={
                 "Authorization": f"Bearer {BOTPRESS_TOKEN}",
-                "X-Bot-Id": CHAT_API_ID,
+                "X-Bot-Id": bot_id,  # <-- FIXED HERE
                 "Content-Type": "application/json"
             }
         )
@@ -202,7 +192,10 @@ if st.button("Send to Botpress"):
             # Fetch the response
             reply_res = requests.get(
                 f"https://chat.botpress.cloud/v1/chat/conversations/{st.session_state.conversation_id}/messages",
-                headers={"Authorization": f"Bearer {BOTPRESS_TOKEN}"}
+                headers={
+                    "Authorization": f"Bearer {BOTPRESS_TOKEN}",
+                    "X-Bot-Id": bot_id  # <-- ADD HERE TOO FOR GET
+                }
             )
             data = reply_res.json()
             messages = data.get("messages", [])
