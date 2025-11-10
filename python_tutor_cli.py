@@ -5,7 +5,6 @@ A simple CLI tool to help with Python questions and troubleshooting.
 """
 
 import sys
-import os
 from typing import Optional
 
 
@@ -14,10 +13,10 @@ class SimplePythonTutor:
     A simple Python tutor that provides guidance without requiring API keys.
     Useful for basic troubleshooting and explanations.
     """
-    
+
     def __init__(self):
         self.knowledge_base = self._build_knowledge_base()
-    
+
     def _build_knowledge_base(self):
         """Build a knowledge base of common Python issues and solutions."""
         return {
@@ -105,36 +104,36 @@ Common issues:
                 ]
             }
         }
-    
+
     def analyze_question(self, question: str) -> Optional[dict]:
         """Analyze user question and return relevant knowledge."""
         question_lower = question.lower()
-        
+
         # Find matching knowledge base entry
         for key, knowledge in self.knowledge_base.items():
             triggers = knowledge.get("triggers", [])
             if any(trigger in question_lower for trigger in triggers):
                 return knowledge
-        
+
         return None
-    
+
     def provide_help(self, question: str):
         """Provide help based on the user's question."""
         print("\n" + "="*70)
         print("🐍 PYTHON AI TUTOR")
         print("="*70)
-        
+
         knowledge = self.analyze_question(question)
-        
+
         if knowledge:
             print(f"\n📖 {knowledge['title']}")
             print("-"*70)
             print(knowledge['explanation'])
-            
+
             print("\n✅ SOLUTIONS:")
             for i, solution in enumerate(knowledge['solutions'], 1):
                 print(f"\n{i}. {solution}")
-            
+
             if 'prevention' in knowledge:
                 print("\n🛡️ PREVENTION / BEST PRACTICES:")
                 for tip in knowledge['prevention']:
@@ -148,14 +147,14 @@ Common issues:
             print("  • Path and directory problems")
             print("  • Python installation and setup")
             print("\nPlease describe your issue in more detail.")
-        
+
         print("\n" + "="*70)
-    
+
     def interactive_mode(self):
         """Run in interactive mode."""
         print("\n🐍 Python AI Tutor - Interactive Mode")
         print("Type your question or 'quit' to exit\n")
-        
+
         while True:
             question = input("You: ").strip()
             if question.lower() in ['quit', 'exit', 'q']:
@@ -163,7 +162,7 @@ Common issues:
                 break
             if not question:
                 continue
-            
+
             self.provide_help(question)
             print()
 
@@ -171,7 +170,7 @@ Common issues:
 def main():
     """Main entry point for CLI."""
     tutor = SimplePythonTutor()
-    
+
     # Check if question provided as command line argument
     if len(sys.argv) > 1:
         question = " ".join(sys.argv[1:])

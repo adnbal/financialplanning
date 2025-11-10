@@ -1,8 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import requests
-from typing import Dict, List, Optional
-import re
+from typing import List
 
 
 class PythonAITutor:
@@ -10,17 +9,17 @@ class PythonAITutor:
     AI-powered Python tutor that helps users understand Python concepts,
     troubleshoot errors, and learn best practices.
     """
-    
+
     def __init__(self, gemini_api_key: str, openrouter_api_key: str):
         """Initialize the AI tutor with API keys for different AI services."""
         self.gemini_api_key = gemini_api_key
         self.openrouter_api_key = openrouter_api_key
         genai.configure(api_key=gemini_api_key)
-        
+
     def identify_error_type(self, user_input: str) -> str:
         """Identify the type of Python issue from user input."""
         user_input_lower = user_input.lower()
-        
+
         if "cannot find the path" in user_input_lower or "path specified" in user_input_lower:
             return "path_error"
         elif ".venv" in user_input_lower or "virtual environment" in user_input_lower or "virtualenv" in user_input_lower:
@@ -35,7 +34,7 @@ class PythonAITutor:
             return "general_question"
         else:
             return "general"
-    
+
     def get_context_specific_prompt(self, user_input: str, error_type: str) -> str:
         """Generate a context-specific prompt based on the error type."""
         base_context = """You are a helpful Python AI tutor. Your goal is to:
@@ -44,7 +43,7 @@ class PythonAITutor:
 3. Provide best practices and recommendations
 4. Use simple language suitable for all skill levels
 """
-        
+
         if error_type == "path_error":
             return f"""{base_context}
 
@@ -114,19 +113,19 @@ Please provide a helpful, clear, and educational response."""
         try:
             error_type = self.identify_error_type(user_input)
             prompt = self.get_context_specific_prompt(user_input, error_type)
-            
+
             model = genai.GenerativeModel("gemini-pro")
             response = model.generate_content(prompt)
             return response.text
         except Exception as e:
             return f"Error getting Gemini response: {e}"
-    
+
     def get_response_with_deepseek(self, user_input: str) -> str:
         """Get AI response using DeepSeek via OpenRouter."""
         try:
             error_type = self.identify_error_type(user_input)
             prompt = self.get_context_specific_prompt(user_input, error_type)
-            
+
             headers = {
                 "Authorization": f"Bearer {self.openrouter_api_key}",
                 "Content-Type": "application/json"
@@ -144,7 +143,7 @@ Please provide a helpful, clear, and educational response."""
             return res.json()["choices"][0]["message"]["content"]
         except Exception as e:
             return f"Error getting DeepSeek response: {e}"
-    
+
     def get_common_solutions(self, error_type: str) -> List[str]:
         """Provide quick common solutions for known error types."""
         solutions = {
@@ -176,7 +175,7 @@ Please provide a helpful, clear, and educational response."""
 def run_tutor_app():
     """Main Streamlit app for the Python AI Tutor."""
     st.set_page_config(page_title="🐍 Python AI Tutor", page_icon="🐍", layout="wide")
-    
+
     st.title("🐍 Python AI Tutor")
     st.markdown("""
     Welcome to your personal Python AI Tutor! I can help you with:
@@ -185,27 +184,27 @@ def run_tutor_app():
     - 🛠️ Troubleshooting virtual environments and setup issues
     - 📚 Explaining code and providing examples
     """)
-    
+
     # Check for API keys in secrets
     try:
         gemini_api_key = st.secrets["gemini"]["api_key"]
         openrouter_api_key = st.secrets["openrouter"]["api_key"]
-    except Exception as e:
+    except Exception:
         st.error("⚠️ API keys not found in secrets. Please configure them to use the tutor.")
         st.stop()
-    
+
     # Initialize tutor
     tutor = PythonAITutor(gemini_api_key, openrouter_api_key)
-    
+
     # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    
+
     # Display chat history
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-    
+
     # Common scenarios quick access
     st.sidebar.header("📋 Quick Help Topics")
     quick_topics = {
@@ -215,35 +214,35 @@ def run_tutor_app():
         "Getting Started": "How do I create and activate a Python virtual environment?",
         "Package Installation": "How do I install Python packages and manage dependencies?"
     }
-    
+
     selected_topic = st.sidebar.selectbox("Choose a topic:", ["Custom Question"] + list(quick_topics.keys()))
-    
+
     # User input
     if selected_topic != "Custom Question":
         user_input = quick_topics[selected_topic]
         st.info(f"Selected topic: {selected_topic}")
     else:
         user_input = st.chat_input("Ask me anything about Python!")
-    
+
     # Process user input
     if user_input:
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
-        
+
         # Identify error type and show quick solutions
         error_type = tutor.identify_error_type(user_input)
         quick_solutions = tutor.get_common_solutions(error_type)
-        
+
         if quick_solutions:
             with st.expander("💡 Quick Solutions", expanded=True):
                 for solution in quick_solutions:
                     st.markdown(f"- {solution}")
-        
+
         # AI selection
         col1, col2 = st.columns(2)
-        
+
         with col1:
             if st.button("🤖 Ask Gemini", use_container_width=True):
                 with st.spinner("Gemini is thinking..."):
@@ -251,7 +250,7 @@ def run_tutor_app():
                     st.session_state.messages.append({"role": "assistant", "content": response})
                     with st.chat_message("assistant"):
                         st.markdown(response)
-        
+
         with col2:
             if st.button("🧠 Ask DeepSeek", use_container_width=True):
                 with st.spinner("DeepSeek is thinking..."):
@@ -259,12 +258,12 @@ def run_tutor_app():
                     st.session_state.messages.append({"role": "assistant", "content": response})
                     with st.chat_message("assistant"):
                         st.markdown(response)
-    
+
     # Add clear chat button
     if st.sidebar.button("🗑️ Clear Chat History"):
         st.session_state.messages = []
         st.rerun()
-    
+
     # Additional resources
     st.sidebar.markdown("---")
     st.sidebar.header("📚 Resources")
