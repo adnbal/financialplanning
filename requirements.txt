@@ -3,3 +3,5 @@ pandas
 plotly
 requests
 google-generativeai
+azure-cognitiveservices-speech
+azure-ai-translation-text
