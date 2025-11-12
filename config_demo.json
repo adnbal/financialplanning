@@ -1,0 +1,16 @@
+{
+  "note": "This is a demo configuration file for testing without Azure services",
+  "azure_openai": {
+    "endpoint": "",
+    "api_key": "",
+    "deployment": "gpt-4"
+  },
+  "azure_speech": {
+    "key": "",
+    "region": ""
+  },
+  "azure_translator": {
+    "key": "",
+    "region": ""
+  }
+}
